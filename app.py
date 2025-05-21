@@ -4,22 +4,27 @@ import os
 
 app = Flask(__name__)
 
-# Leer la API Key desde variable de entorno
-API_KEY = os.getenv("GENAI_API_KEY")
-client = genai.Client(api_key=API_KEY)
+# Configura tu API Key (debes definirla en Render como variable de entorno)
+API_KEY = os.getenv("API_KEY")
 
-@app.route('/chat', methods=['POST'])
+# Configurar el acceso a la API de Gemini
+genai.configure(api_key=API_KEY)
+
+# Instanciar el modelo de Gemini
+model = genai.GenerativeModel("gemini-1.5-flash-latest")
+
+@app.route("/chat", methods=["GET"])
 def chat():
-    user_input = request.json['message']
-    response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=user_input
-    )
-    return jsonify({"reply": response.text})
+    prompt = request.args.get("prompt")
+    
+    if not prompt:
+        return jsonify({"error": "Falta el parámetro 'prompt'"}), 400
 
-@app.route('/')
-def home():
-    return "Cachimbot API activa."
+    try:
+        response = model.generate_content(prompt)
+        return jsonify({"response": response.text})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+if __name__ == "__main__":
+    app.run(debug=True)
